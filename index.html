@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Weather Search App</title>
+
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -37,9 +38,7 @@
       border:2px solid #e0e0e0;
       border-radius:10px;
       outline:none;
-      transition:border-color 0.3s;
     }
-    .search-box input:focus { border-color:#667eea; }
 
     .search-box button {
       position:absolute;
@@ -47,83 +46,77 @@
       transform:translateY(-50%);
       background:#667eea; color:white;
       border:none; padding:10px 20px;
-      border-radius:8px; cursor:pointer; font-size:16px;
-      transition:background 0.3s;
+      border-radius:8px; cursor:pointer;
     }
-    .search-box button:hover { background:#5568d3; }
-    .search-box button:disabled { background:#ccc; cursor:not-allowed; }
 
-    .loading { text-align:center; padding:40px; display:none; }
+    .loading { text-align:center; display:none; }
     .loading.show { display:block; }
-    .spinner {
-      border:4px solid #f3f3f3;
-      border-top:4px solid #667eea;
-      border-radius:50%;
-      width:50px; height:50px;
-      animation:spin 1s linear infinite;
-      margin:0 auto 20px;
-    }
-    @keyframes spin { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
 
-    .error { background:#fee; border:1px solid #fcc; color:#c33; padding:15px; border-radius:10px; margin-bottom:20px; display:none; }
+    .error {
+      background:#fee; border:1px solid #fcc; color:#c33;
+      padding:15px; border-radius:10px; display:none;
+    }
     .error.show { display:block; }
 
     .weather-result {
-      background:linear-gradient(135deg,#e0f7fa 0%,#b2ebf2 100%);
-      border-radius:15px; padding:30px; text-align:center; display:none;
+      background:#e0f7fa;
+      border-radius:15px;
+      padding:30px;
+      text-align:center;
+      display:none;
     }
     .weather-result.show { display:block; }
-    .city-name { font-size:28px; font-weight:bold; color:#333; margin-bottom:20px; }
-    .temperature { font-size:64px; font-weight:bold; color:#667eea; margin:20px 0; }
-    .weather-description { font-size:20px; color:#666; text-transform:capitalize; margin-bottom:20px; }
 
-    .reset-btn {
-      background:#667eea; color:white; border:none;
-      padding:12px 30px; border-radius:8px; cursor:pointer;
-      font-size:16px; transition:background 0.3s; margin-top:20px;
-    }
-    .reset-btn:hover { background:#5568d3; }
+    .temperature { font-size:60px; color:#667eea; }
+    .weather-description { text-transform:capitalize; margin:10px 0; }
+
+    .weather-icon img { width:80px; }
+
+    .wind { margin-top:10px; color:#555; }
 
     .note {
       text-align:center; color:#999; font-size:14px; margin-top:20px;
     }
-    .note a {
-      color:#667eea; text-decoration:underline; margin:0 5px;
-    }
+    .note a { color:#667eea; }
   </style>
 </head>
+
 <body>
   <div class="container">
+
     <div class="header">
       <h1>🌤️ Weather Search</h1>
-      <p style="color:#666;">Find current weather for any city</p>
+      <p>Find current weather for any city</p>
     </div>
 
     <div class="search-box">
-      <input type="text" id="cityInput" placeholder="Enter city name (e.g., Sydney)" />
+      <input type="text" id="cityInput" placeholder="Enter city name">
       <button id="searchBtn">Search</button>
     </div>
 
     <div class="error" id="errorMsg"></div>
 
-    <div class="loading" id="loading">
-      <div class="spinner"></div>
-      <p>Searching...</p>
-    </div>
+    <div class="loading" id="loading">Loading...</div>
 
     <div class="weather-result" id="weatherResult">
-      <div class="city-name" id="cityName"></div>
+      <h2 id="cityName"></h2>
+
+      <div class="weather-icon">
+        <img id="weatherIcon" alt="Weather icon">
+      </div>
+
       <div class="temperature" id="temperature"></div>
       <div class="weather-description" id="weatherDesc"></div>
-      <button class="reset-btn" id="resetBtn">Search Another City</button>
+      <div class="wind" id="windSpeed"></div>
     </div>
 
-    <!-- Footer with GitHub links -->
     <div class="note">
       Coded by Leora 💕 |
-      <a href="https://github.com/LeoraGopane" target="_blank">GitHub Profile</a> |
-      <a href="https://github.com/LeoraGopane/MyProjectRepo" target="_blank">GitHub Repository</a>
+      <a href="https://github.com/LeoraGopane/MyProjectRepo" target="_blank">
+        GitHub Repository
+      </a>
     </div>
+
   </div>
 
   <script>
@@ -135,51 +128,44 @@
     const loading = document.getElementById("loading");
     const errorMsg = document.getElementById("errorMsg");
     const weatherResult = document.getElementById("weatherResult");
+
     const cityName = document.getElementById("cityName");
     const temperature = document.getElementById("temperature");
     const weatherDesc = document.getElementById("weatherDesc");
-    const resetBtn = document.getElementById("resetBtn");
+    const windSpeed = document.getElementById("windSpeed");
+    const weatherIcon = document.getElementById("weatherIcon");
+
+    searchBtn.addEventListener("click", searchWeather);
 
     async function searchWeather() {
       const city = cityInput.value.trim();
-      if (!city) { showError("Please enter a city name"); return; }
+      if (!city) return;
 
-      hideAll();
       loading.classList.add("show");
-      searchBtn.disabled = true;
+      weatherResult.classList.remove("show");
+      errorMsg.classList.remove("show");
 
       try {
-        const response = await fetch(`${API_URL}?q=${encodeURIComponent(city)}&units=metric&appid=${API_KEY}`);
-        if (!response.ok) {
-          if (response.status===404) showError("City not found. Please try another city.");
-          else if (response.status===401) showError("API key required. Please add your OpenWeather API key in the code.");
-          else showError("Failed to fetch weather data. Please try again.");
-          return;
-        }
-        const data = await response.json();
-        displayWeather(data);
+        const res = await fetch(`${API_URL}?q=${city}&units=metric&appid=${API_KEY}`);
+        if (!res.ok) throw new Error("City not found");
+
+        const data = await res.json();
+
+        cityName.textContent = `${data.name}, ${data.sys.country}`;
+        temperature.textContent = `${Math.round(data.main.temp)}°C`;
+        weatherDesc.textContent = data.weather[0].description;
+        windSpeed.textContent = `💨 Wind: ${data.wind.speed} m/s`;
+        weatherIcon.src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+
+        weatherResult.classList.add("show");
       } catch {
-        showError("Failed to fetch weather data. Please check your internet connection.");
+        errorMsg.textContent = "City not found";
+        errorMsg.classList.add("show");
       } finally {
         loading.classList.remove("show");
-        searchBtn.disabled = false;
       }
     }
-
-    function displayWeather(data) {
-      cityName.textContent = `${data.name}, ${data.sys.country}`;
-      temperature.textContent = `${Math.round(data.main.temp)}°C`;
-      weatherDesc.textContent = data.weather[0].description;
-      weatherResult.classList.add("show");
-    }
-
-    function showError(msg) { errorMsg.textContent = msg; errorMsg.classList.add("show"); }
-    function hideAll() { loading.classList.remove("show"); errorMsg.classList.remove("show"); weatherResult.classList.remove("show"); }
-    function reset() { cityInput.value=""; hideAll(); }
-
-    searchBtn.addEventListener("click", searchWeather);
-    resetBtn.addEventListener("click", reset);
-    cityInput.addEventListener("keypress", e => { if(e.key==="Enter") searchWeather(); });
   </script>
+
 </body>
 </html>
